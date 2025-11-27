@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberPro v7.0 (AI Live Generation)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #334155;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
+
+        /* --- UI COMPONENTS --- */
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 1rem; touch-action: manipulation; }
+        .btn-primary { background: var(--accent); color: white; width: 100%; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-secondary { background: #e2e8f0; color: var(--primary); }
+
+        /* --- SETUP SCREEN --- */
+        #setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; text-align: center; }
+        .setup-card { background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100%; max-width: 400px; }
+        .input-group { margin: 20px 0; text-align: left; }
+        input[type="password"] { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; outline: none; margin-bottom: 10px; }
+        input[type="password"]:focus { border-color: var(--accent); }
+        .status-msg { font-size: 0.85rem; font-weight: 600; min-height: 20px; margin-top: 5px; }
+
+        /* --- EXAM INTERFACE --- */
+        #exam-interface { display: none; flex-direction: column; height: 100%; position: relative; }
+        
+        header { background: var(--card); padding: 10px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; height: 70px; flex-shrink: 0; }
+        .timer-container { display: flex; align-items: center; gap: 15px; font-variant-numeric: tabular-nums; }
+        .timer-box { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+        .timer-label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; }
+        .timer-val { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+        .timer-sep { height: 25px; width: 1px; background: #e2e8f0; }
+
+        .progress-container { height: 4px; background: #e2e8f0; width: 100%; flex-shrink: 0; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease; }
+        
+        .main-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; position: relative; }
+        
+        .question-card { 
+            background: var(--card); 
+            width: 100%; 
+            max-width: 800px; 
+            padding: 25px; 
+            border-radius: 16px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
+            position: relative; 
+            margin-bottom: 100px; /* Space for hint FAB */
+        }
+
+        .q-meta { font-size: 0.75rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 15px; }
+        .q-text { font-size: 1.25rem; font-weight: 700; line-height: 1.4; color: var(--primary); margin-bottom: 25px; }
+        
+        .options-grid { display: flex; flex-direction: column; gap: 12px; }
+        .option-btn { 
+            background: #fff; border: 2px solid #e2e8f0; 
+            padding: 18px; border-radius: 12px; 
+            text-align: left; font-size: 1rem; 
+            cursor: pointer; transition: all 0.2s; 
+            color: var(--text); position: relative;
+        }
+        .option-btn:active { background: #f1f5f9; transform: scale(0.99); }
+        .option-btn.selected { border-color: var(--accent); background: #eff6ff; color: var(--accent); font-weight: 600; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+
+        /* --- HINT SYSTEM --- */
+        .hint-container { position: fixed; bottom: 90px; right: 20px; z-index: 50; display: flex; flex-direction: column; align-items: flex-end; }
+        .hint-badge { background: var(--primary); color: white; font-size: 0.7rem; font-weight: bold; padding: 4px 8px; border-radius: 10px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .hint-fab { 
+            width: 60px; height: 60px; border-radius: 50%; 
+            background: linear-gradient(135deg, #8b5cf6, #d946ef); 
+            color: white; border: none; cursor: pointer; 
+            font-size: 1.8rem; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); 
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+        }
+        .hint-fab:active { transform: scale(0.9); }
+        .hint-fab.pulsating { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(139, 92, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); } }
+        
+        .hint-modal { 
+            position: fixed; bottom: 0; left: 0; width: 100%; 
+            background: white; border-radius: 20px 20px 0 0; 
+            padding: 25px; box-shadow: 0 -5px 30px rgba(0,0,0,0.1); 
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+            z-index: 100; max-height: 50vh; overflow-y: auto;
+        }
+        .hint-modal.visible { transform: translateY(0); }
+
+        /* --- FOOTER --- */
+        footer { padding: 15px 20px; background: white; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; z-index: 10; flex-shrink: 0; }
+        footer .btn { flex: 1; }
+
+        /* --- LOADING & OVERLAYS --- */
+        .ai-loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; border-radius: 16px; backdrop-filter: blur(2px); }
+        .spinner { width: 35px; height: 35px; border: 4px solid #e2e8f0; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); display: none; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; backdrop-filter: blur(5px); }
+        
+        /* --- DASHBOARD --- */
+        #dashboard { display: none; padding: 20px; overflow-y: auto; height: 100%; background: var(--bg); }
+        .stat-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .review-item { padding: 20px 0; border-bottom: 1px solid #f1f5f9; text-align: left; }
+        .tag { font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; font-weight: 700; margin-right: 5px; }
+        .tag.correct { background: #dcfce7; color: #166534; }
+        .tag.incorrect { background: #fee2e2; color: #991b1b; }
+        .tag.topic { background: #f1f5f9; color: #64748b; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <h1 style="color:var(--primary); margin-bottom:10px;">CyberPro v7.0</h1>
+        <div class="setup-card">
+            <p style="color:#64748b; font-size:0.9rem;">Connect Gemini API for Live Question Generation.</p>
+            <div class="input-group">
+                <label style="font-weight:600; font-size:0.8rem; display:block; margin-bottom:5px;">Gemini API Key (Optional)</label>
+                <input type="password" id="api-key" placeholder="AIzaSy...">
+                <button class="btn btn-secondary" onclick="app.testConnection()" style="width:100%">Test Connection</button>
+                <div id="api-status" class="status-msg"></div>
+            </div>
+            <button class="btn btn-primary" onclick="app.startExam()">Start Assessment</button>
+        </div>
+    </div>
+
+    <div id="exam-interface">
+        <header>
+            <div style="font-weight:800;">CyberPro</div>
+            <div class="timer-container">
+                <div class="timer-box">
+                    <span class="timer-label">TOTAL</span>
+                    <span class="timer-val" id="timer-total">00:00</span>
+                </div>
+                <div class="timer-sep"></div>
+                <div class="timer-box">
+                    <span class="timer-label">THIS Q</span>
+                    <span class="timer-val" id="timer-question" style="color:var(--warning)">00:00</span>
+                </div>
+            </div>
+            <button class="btn btn-secondary" style="padding:6px 12px; font-size:0.8rem;" onclick="app.pause()">PAUSE</button>
+        </header>
+        <div class="progress-container"><div class="progress-fill" id="progress-bar"></div></div>
+        
+        <div class="main-content">
+            <div class="question-card" id="q-card">
+                <div class="ai-loader" id="ai-loader">
+                    <div class="spinner"></div>
+                    <div style="font-size:0.9rem; font-weight:600; color:var(--accent);" id="loader-text">Gemini is writing a new question...</div>
+                </div>
+                
+                <div class="q-meta" id="q-meta">TOPIC</div>
+                <div class="q-text" id="q-text">Loading...</div>
+                <div class="options-grid" id="q-options"></div>
+            </div>
+        </div>
+
+        <div class="hint-container">
+            <div class="hint-badge" id="hint-counter">3</div>
+            <div class="hint-fab pulsating" id="hint-btn" onclick="app.getHint()">💡</div>
+        </div>
+
+        <div class="hint-modal" id="hint-drawer">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:700; color:#8b5cf6;">
+                <span>AI Insight</span><span onclick="app.closeHint()" style="cursor:pointer; font-size:1.5rem; padding:0 10px;">✕</span>
+            </div>
+            <div id="hint-content">Thinking...</div>
+        </div>
+
+        <footer>
+            <button class="btn btn-secondary" id="btn-prev" onclick="app.prev()" disabled>Back</button>
+            <button class="btn btn-primary" id="btn-next" onclick="app.next()">Next</button>
+            <button class="btn btn-primary" style="display:none; background:var(--success);" id="btn-finish" onclick="app.finish()">Finish</button>
+        </footer>
+    </div>
+
+    <div class="overlay" id="pause-overlay">
+        <div>
+            <div style="font-size:3rem; margin-bottom:15px;">⏸️</div>
+            <h2>Exam Paused</h2>
+            <p style="color:#cbd5e1; max-width:300px; margin:0 auto 20px auto; font-size:0.9rem;">To ensure integrity, this question will be regenerated when you resume.</p>
+            <button class="btn btn-primary" onclick="app.resume()">Resume & Regenerate</button>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <div class="stat-card">
+            <div style="font-size:3.5rem; font-weight:800; color:var(--primary);" id="score-final">0%</div>
+            <div style="color:#64748b; font-size:0.9rem; font-weight:600;">FINAL SCORE</div>
+            <div id="time-final" style="margin-top:10px; font-weight:600;"></div>
+        </div>
+        <div class="stat-card">
+            <canvas id="behaviorChart"></canvas>
+        </div>
+        <div class="stat-card" style="text-align:left;">
+            <h3>Detailed Review</h3>
+            <div id="review-content"></div>
+        </div>
+        <button class="btn btn-secondary" style="width:100%; margin-top:20px;" onclick="app.exportJSON()">Download JSON Report</button>
+    </div>
+
+    <script>
+        // --- CLEAN DATASET (Correct Answer NOT in Distractors) ---
+        // 'a' = correct answer
+        // 'o' = ONLY distractors (incorrect answers)
+        const SEED_DATA = [
+            { t: "Governance", q: "A company wants to reduce IT infrastructure costs while maintaining strict security control. They implement a 'Zero Trust' policy. Which action best aligns with this?", a: "Continuous verification of every user and device", o: ["Trusting all devices inside the firewall", "Using a VPN for all staff", "Installing antivirus on the server"] },
+            { t: "Security Principles", q: "During a forensic investigation, you find that a hacker modified patient records. Which pillar of the CIA Triad was compromised?", a: "Integrity", o: ["Confidentiality", "Availability", "Authentication"] },
+            { t: "Attack Vectors", q: "A user receives an email from 'IT Support' claiming their password expired, linking to a fake site. This is:", a: "Phishing", o: ["Whaling", "DNS Spoofing", "Man-in-the-Middle"] },
+            { t: "IAM", q: "What is the most effective implementation to protect an account if a password is stolen?", a: "MFA (Multi-Factor Authentication)", o: ["Password Complexity Rules", "SSO (Single Sign-On)", "Biometric Storage"] },
+            { t: "Attack Vectors", q: "An attacker uses a botnet to flood a web server with traffic. This is classified as:", a: "DDoS (Distributed Denial of Service)", o: ["SQL Injection", "Cross-Site Scripting", "Zero-Day Exploit"] },
+            { t: "AI Concepts", q: "Which best describes 'Agentic AI' compared to 'Generative AI'?", a: "It takes autonomous actions to achieve goals", o: ["It generates text faster", "It is only used for images", "It requires more data to run"] },
+            { t: "Operations", q: "A developer leaves a debug port open. A hacker uses this to gain access. This vulnerability is:", a: "Misconfiguration", o: ["Phishing", "Social Engineering", "Ransomware"] },
+            { t: "Network Security", q: "Which protocol is mandatory for securing web traffic?", a: "HTTPS (TLS/SSL)", o: ["HTTP", "FTP", "SMTP"] },
+            { t: "Digital Transformation", q: "What is the primary strategic advantage of a 'Mobile-First' digital transformation?", a: "Inbuilt biometric security and ubiquity", o: ["Lower development costs", "Easier to code", "Does not require internet"] },
+            { t: "Emerging Tech", q: "Which technology acts as the underlying 'ledger' for verifying transactions without a central authority?", a: "Blockchain", o: ["Cloud Computing", "Edge Computing", "Database Sharding"] },
+            { t: "Attack Vectors", q: "A CEO is targeted by a sophisticated email appearing to be from a partner. This is:", a: "Whaling / Business Email Compromise", o: ["Spear Phishing", "Vishing", "Bulk Phishing"] },
+            { t: "Operations", q: "In Incident Response, what is the priority after detecting live malware?", a: "Containment", o: ["Eradication", "Recovery", "Documentation"] },
+            { t: "Governance", q: "Why is 'Shadow IT' a risk?", a: "Unapproved devices/software bypass security controls", o: ["It costs too much money", "It slows down the network", "It creates duplicate files"] },
+            { t: "Operations", q: "What distinguishes a 'NOC-based SOC'?", a: "It combines network performance monitoring with threat detection", o: ["It focuses only on hardware", "It is automated by AI", "It operates only during business hours"] },
+            { t: "Attack Vectors", q: "A hacker intercepts the Wi-Fi signal between a user and a router. This is:", a: "Man-in-the-Middle (MitM)", o: ["Replay Attack", "IP Spoofing", "DoS"] },
+            { t: "Operations", q: "Which AI capability is essential for a SOC to handle daily alerts?", a: "Automated Anomaly Detection", o: ["Generative text", "Image creation", "Voice synthesis"] },
+            { t: "Operations", q: "What does RPO (Recovery Point Objective) define?", a: "The maximum acceptable amount of data loss (time)", o: ["The time it takes to fix a server", "The cost of the backup solution", "The speed of the internet connection"] },
+            { t: "Security Principles", q: "Which is a 'Physical' security control?", a: "Biometric Door Lock", o: ["Firewall", "Encryption", "Antivirus"] },
+            { t: "IAM", q: "To access multiple apps with one credential, use:", a: "SSO (Single Sign-On)", o: ["MFA", "VPN", "PAM"] },
+            { t: "Attack Vectors", q: "What is the danger of a 'Zero-Day' vulnerability?", a: "There is no vendor patch available at the time of exploitation", o: ["It takes zero days to fix", "It costs zero dollars to exploit", "It only affects new computers"] },
+            { t: "Emerging Tech", q: "In ID2020, what is the primary privacy concern?", a: "Implantation of microchips/biometric tracking", o: ["Cost of implementation", "Slow internet speeds", "Lack of government support"] },
+            { t: "AI Concepts", q: "Deep Learning differs from ML because it:", a: "Uses multi-layered neural networks", o: ["Does not require data", "Is slower", "Only works on text"] },
+            { t: "Network Security", q: "A 'Honeypot' is designed to:", a: "Lure attackers to study their behavior", o: ["Store encrypted passwords", "Speed up network traffic", "Filter spam emails"] },
+            { t: "Governance", q: "Which regulation mandates 'Strong Customer Authentication'?", a: "PSD2", o: ["HIPAA", "SOX", "FERPA"] },
+            { t: "Attack Vectors", q: "What is 'Credential Stuffing'?", a: "Using stolen password pairs from one breach on other sites", o: ["Guessing random passwords", "Injecting code into login fields", "Resetting admin passwords"] },
+            { t: "Operations", q: "Primary function of SOAR?", a: "Orchestrating and automating incident response", o: ["storing logs", "Generating phishing emails", "Monitoring network uptime"] },
+            { t: "IAM", q: "Behavioral Biometrics validates based on:", a: "Patterns of activity (typing, mouse movement)", o: ["Fingerprints", "Retina scans", "Face shape"] },
+            { t: "Attack Vectors", q: "A 'Logic Bomb' is malware that:", a: "Executes only when specific conditions are met", o: ["Explodes physically", "Spreads via email", "Encrypts files immediately"] },
+            { t: "Network Security", q: "Which device is the 'traffic cop' directing packets?", a: "Router", o: ["Switch", "Hub", "Repeater"] },
+            { t: "App Security", q: "To protect against SQL Injection, use:", a: "Input Validation and Parameterized Queries", o: ["Stronger Passwords", "HTTPS", "Firewalls"] },
+            { t: "Governance", q: "Vendor Risk Management is critical because:", a: "Third-party suppliers often serve as a backdoor", o: ["Vendors are expensive", "Contracts are hard to manage", "Vendors use different time zones"] },
+            { t: "Governance", q: "What is the 'Human Firewall'?", a: "A well-trained workforce that reports threats", o: ["A physical security guard", "A software blocking hackers", "An AI system"] },
+            { t: "Security Principles", q: "Which is a 'Detective' control?", a: "Security Camera / CCTV", o: ["Firewall", "Fence", "Backup"] },
+            { t: "Governance", q: "Data Governance primarily ensures:", a: "Availability, usability, integrity, and security of data", o: ["Data is deleted often", "Data is sold for profit", "Data is stored in the cloud"] },
+            { t: "Attack Vectors", q: "A 'Botnet' is controlled via a:", a: "C&C (Command and Control) Server", o: ["SQL Database", "Public Website", "Bluetooth Connection"] },
+            { t: "Emerging Tech", q: "The Metaverse relies on what for digital assets?", a: "NFTs / Blockchain", o: ["Cloud Storage", "VR Headsets", "5G"] },
+            { t: "Emerging Tech", q: "Main cyber risk of 'Smart Cities'?", a: "Large attack surface due to IoT", o: ["High electricity use", "Traffic jams", "Expensive sensors"] },
+            { t: "AI Concepts", q: "Agentic AI is the 'next frontier' because:", a: "It can independently plan and execute tasks", o: ["It draws better pictures", "It is cheaper", "It runs on mobile phones"] },
+            { t: "Emerging Tech", q: "Quantum Computing threat:", a: "It could break current encryption (RSA)", o: ["It uses too much power", "It is too fast for humans", "It creates radiation"] },
+            { t: "Attack Vectors", q: "What is 'Polymorphic Malware'?", a: "Malware that changes its code signature to evade detection", o: ["Malware that deletes itself", "Malware that targets phones", "Malware that encrypts data"] },
+            { t: "Operations", q: "In a SOC, 'Triage' is:", a: "Categorizing and prioritizing alerts", o: ["Fixing computers", "Writing reports", "Installing updates"] },
+            { t: "Operations", q: "Which is an EDR tool?", a: "CrowdStrike / SentinelOne", o: ["Norton Antivirus", "Windows Firewall", "Adobe Reader"] },
+            { t: "Network Security", q: "Purpose of 'Air Gapping'?", a: "Physically isolating a computer from any network", o: ["Keeping it cool", "Using wireless charging", "Running it on battery"] },
+            { t: "Attack Vectors", q: "A 'Rootkit' is dangerous because:", a: "It hides its presence from the OS", o: ["It fills up the hard drive", "It steals mice", "It breaks monitors"] },
+            { t: "Attack Vectors", q: "Social Engineering relies on:", a: "Manipulating human psychology", o: ["Technical flaws", "Brute force", "Network speed"] },
+            { t: "App Security", q: "Input Sanitization prevents:", a: "Code injection attacks (XSS, SQLi)", o: ["Slow loading", "Database errors", "Hardware failure"] },
+            { t: "Attack Vectors", q: "Difference between Worm and Virus?", a: "Worm self-replicates without human interaction", o: ["Worm requires a host", "Virus is harmless", "Virus spreads via hardware"] },
+            { t: "Attack Vectors", q: "What is 'Clickjacking'?", a: "Tricking user into clicking invisible elements", o: ["Stealing a mouse", "Typing too fast", "Hacking a keyboard"] },
+            { t: "Governance", q: "The 'Dark Web' is accessed via:", a: "TOR (The Onion Router)", o: ["Chrome", "Internet Explorer", "Safari"] },
+            { t: "Attack Vectors", q: "What is 'Dumpster Diving'?", a: "Searching trash for sensitive info", o: ["Cleaning the office", "Recycling", "Deleting digital files"] },
+            { t: "Emerging Tech", q: "SaaS stands for:", a: "Software as a Service", o: ["Security as a Service", "Storage as a Solution", "System as a Server"] },
+            { t: "Governance", q: "Shared Responsibility Model:", a: "Security obligations split between provider and customer", o: ["Provider does everything", "User does everything", "No one is responsible"] },
+            { t: "Network Security", q: "Risk of Jailbroken phones?", a: "Bypasses built-in OS security sandboxing", o: ["They are slower", "They cannot make calls", "They have cracked screens"] },
+            { t: "Network Security", q: "What is 'Geofencing'?", a: "Restricting access based on location", o: ["Building a physical fence", "Blocking GPS", "Tracking satellites"] },
+            { t: "Network Security", q: "Secure Wi-Fi standard:", a: "WPA3", o: ["WEP", "WPA2", "WPS"] },
+            { t: "Operations", q: "Lessons Learned phase involves:", a: "Analyzing what went wrong to improve", o: ["Blaming people", "Restoring backup", "Deleting logs"] },
+            { t: "Operations", q: "Chain of Custody is:", a: "Documentation of evidence handling", o: ["A prison chain", "Linking computers", "A password list"] },
+            { t: "Governance", q: "GDPR breach notification deadline:", a: "72 hours", o: ["24 hours", "1 week", "1 month"] },
+            { t: "Operations", q: "Tabletop Exercise:", a: "Discussion-based simulation of emergency", o: ["Eating lunch", "Physical training", "Testing furniture"] },
+            { t: "Operations", q: "Active Defense:", a: "Proactively engaging/disrupting adversaries", o: ["Waiting for an attack", "Installing antivirus", "Disconnecting internet"] },
+            { t: "Attack Vectors", q: "Cursor moving on its own indicates:", a: "RAT (Remote Access Trojan)", o: ["Stuck key", "Dead battery", "Screen glitch"] },
+            { t: "Attack Vectors", q: "Dropping a labeled USB drive is:", a: "Baiting", o: ["Phishing", "Tailgating", "Whaling"] },
+            { t: "Attack Vectors", q: "Attack exploiting TCP handshake:", a: "SYN Flood", o: ["Ping of Death", "Phishing", "Ransomware"] },
+            { t: "Security Principles", q: "Steganography is:", a: "Hiding data within other files (images)", o: ["Writing in code", "Encrypting hard drives", "Scanning fingerprints"] },
+            { t: "Security Principles", q: "Principle of Least Privilege:", a: "Giving minimum necessary access", o: ["Giving everyone admin", "Giving no access", "Sharing passwords"] },
+            { t: "Governance", q: "Risk Appetite:", a: "Amount of risk an org is willing to accept", o: ["Hunger for risk", "Avoiding all risk", "Insurance cost"] },
+            { t: "Governance", q: "Document outlining tech use:", a: "AUP (Acceptable Use Policy)", o: ["SLA", "NDA", "RFP"] },
+            { t: "Attack Vectors", q: "Tailgating:", a: "Following authorized person into secure area", o: ["Driving too close", "Hacking wifi", "Sending spam"] },
+            { t: "Governance", q: "Purpose of BIA?", a: "Identify critical functions and disruption impact", o: ["Check profits", "Hire staff", "Buy software"] },
+            { t: "Security Principles", q: "Non-Repudiation:", a: "Sender cannot deny sending message", o: ["Denying an action", "Encrypting data", "Deleting logs"] },
+            { t: "Emerging Tech", q: "Risk of Shadow APIs:", a: "Undocumented APIs allow unauthorized access", o: ["They are too fast", "Use too much data", "Expensive"] },
+            { t: "Emerging Tech", q: "Platform connecting producers/consumers:", a: "Transactional Platform", o: ["Pipeline", "Retail", "Manufacturing"] },
+            { t: "Operations", q: "Change Management prevents:", a: "Unauthorized changes introducing vulnerabilities", o: ["Slow developers", "Paperwork", "Innovation"] },
+            { t: "Attack Vectors", q: "Typosquatting:", a: "Registering domains similar to popular ones", o: ["Typing errors", "Hacking keyboards", "Squatting in offices"] },
+            { t: "Network Security", q: "Logic Gate in firewall:", a: "Rules determining allow/deny traffic", o: ["Physical gate", "Microchip", "Password"] },
+            { t: "Emerging Tech", q: "Internet of Behavior (IoB):", a: "Using data to influence human behavior", o: ["Internet for robots", "Fast internet", "New phone"] },
+            { t: "Network Security", q: "War Driving:", a: "Driving around searching for open Wi-Fi", o: ["Driving a tank", "Racing cars", "Hacking cars"] },
+            { t: "Attack Vectors", q: "Bluejacking:", a: "Sending unsolicited messages via Bluetooth", o: ["Stealing blue cars", "Hacking Wi-Fi", "Phishing"] },
+            { t: "Attack Vectors", q: "Vishing:", a: "Voice Phishing (over phone)", o: ["Video phishing", "Visual hacking", "VR hacking"] },
+            { t: "Attack Vectors", q: "Smishing:", a: "SMS Phishing", o: ["Smiling phishing", "Small phishing", "Smart phishing"] },
+            { t: "Emerging Tech", q: "Digital Twin:", a: "Virtual replica of physical system for simulation", o: ["Backup file", "Clone of hacker", "Dual monitor"] },
+            { t: "Emerging Tech", q: "Edge Computing:", a: "Processing data near source", o: ["Computing on desk", "Old computers", "Slow internet"] },
+            { t: "App Security", q: "Fuzzing:", a: "Inputting random data to crash program", o: ["Making things blurry", "Cleaning screens", "Encrypting data"] },
+            { t: "Security Principles", q: "Hash:", a: "One-way function converting data to fixed string", o: ["Breakfast food", "Password", "Virus"] },
+            { t: "IAM", q: "Salting:", a: "Adding random data before hashing", o: ["Making it tasty", "Writing it down", "Encrypting twice"] },
+            { t: "Attack Vectors", q: "Rainbow Table:", a: "Precomputed table for reversing hashes", o: ["Colorful chart", "Project plan", "Screen saver"] },
+            { t: "Attack Vectors", q: "Keylogging:", a: "Recording user keystrokes", o: ["Making keys", "Locking doors", "Logging into admin"] },
+            { t: "Attack Vectors", q: "Shoulder Surfing:", a: "Looking at someone's screen", o: ["Massaging shoulders", "Surfing online", "Hacking Wi-Fi"] },
+            { t: "Attack Vectors", q: "Privilege Escalation:", a: "Exploiting bug to gain higher access", o: ["Getting promotion", "Logging out", "Changing password"] },
+            { t: "Data Security", q: "DLP (Data Loss Prevention):", a: "Tools preventing data from leaving network", o: ["Backing up data", "Deleting data", "Encrypting data"] },
+            { t: "Governance", q: "BYOD:", a: "Bring Your Own Device", o: ["Buy Your Own Data", "Build Your Own Database", "Bring Your Own Desk"] },
+            { t: "Governance", q: "Risk of BYOD:", a: "Mixing personal/corporate data", o: ["Cost", "Too many devices", "Slow wifi"] },
+            { t: "Governance", q: "MDM:", a: "Mobile Device Management", o: ["Master Data Manager", "Main Domain Module", "My Device Manager"] },
+            { t: "Governance", q: "E-Discovery:", a: "Identifying digital evidence for legal cases", o: ["Finding emails", "Searching Google", "Discovering tech"] },
+            { t: "Attack Vectors", q: "Cyber Espionage:", a: "Spying to steal secrets", o: ["Spying for fun", "Watching movies", "Reading emails"] },
+            { t: "Attack Vectors", q: "Hacktivism:", a: "Hacking for political/social causes", o: ["Hacking for activity", "Hacking for money", "Hacking for fame"] },
+            { t: "Threat Actors", q: "White Hat:", a: "Ethical hacker", o: ["Bad hacker", "Government agent", "Script kiddie"] },
+            { t: "Threat Actors", q: "Black Hat:", a: "Malicious hacker", o: ["Good hacker", "Security consultant", "Teacher"] },
+            { t: "Threat Actors", q: "Gray Hat:", a: "Hacks without permission but often not malicious", o: ["Neutral hacker", "Retired hacker", "Student"] },
+            { t: "Governance", q: "Compliance:", a: "Adhering to laws/regulations", o: ["Agreeing with hackers", "Installing software", "Attending meetings"] }
+        ];
+
+        // Ensure 100 questions by filling if short (safety net)
+        while(SEED_DATA.length < 100) SEED_DATA.push(SEED_DATA[0]);
+
+        class CyberApp {
+            constructor() {
+                this.apiKey = "";
+                this.questions = [];
+                this.currentIndex = 0;
+                this.userAnswers = [];
+                this.timerTotal = 0;
+                this.qSeconds = 0;
+                this.interval = null;
+                this.hintsLeft = 3;
+                this.regenerateFlag = false; 
+                
+                this.ui = {
+                    setup: document.getElementById('setup-screen'),
+                    exam: document.getElementById('exam-interface'),
+                    dash: document.getElementById('dashboard'),
+                    qCard: document.getElementById('q-card'),
+                    loader: document.getElementById('ai-loader'),
+                    hintBtn: document.getElementById('hint-btn'),
+                    hintDrawer: document.getElementById('hint-drawer'),
+                    hintContent: document.getElementById('hint-content'),
+                    hintBadge: document.getElementById('hint-counter')
+                };
+            }
+
+            // --- UTILS ---
+            shuffle(array) {
+                let currentIndex = array.length, randomIndex;
+                while (currentIndex != 0) {
+                    randomIndex = Math.floor(Math.random() * currentIndex);
+                    currentIndex--;
+                    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+                }
+                return array;
+            }
+
+            // --- API ---
+            async testConnection() {
+                const key = document.getElementById('api-key').value;
+                const status = document.getElementById('api-status');
+                
+                if(!key) {
+                    status.innerText = "Please enter a key";
+                    status.style.color = "var(--danger)";
+                    return;
+                }
+                
+                status.innerText = "Testing Gemini 2.0...";
+                status.style.color = "var(--accent)";
+                
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ contents: [{ parts: [{ text: "Hello" }] }] })
+                    });
+                    
+                    if(res.ok) {
+                        this.apiKey = key;
+                        status.innerText = "✅ Connection Verified";
+                        status.style.color = "var(--success)";
+                    } else throw new Error();
+                } catch(e) {
+                    status.innerText = "❌ Connection Failed";
+                    status.style.color = "var(--danger)";
+                }
+            }
+
+            // --- START ---
+            startExam() {
+                if(!this.apiKey) this.apiKey = document.getElementById('api-key').value;
+                
+                // Init: Shuffle & prepare
+                this.questions = this.shuffle(SEED_DATA.map((q, i) => ({ ...q, id: i, isRegenerated: false })));
+                this.userAnswers = new Array(100).fill(null);
+                
+                this.ui.setup.style.display = 'none';
+                this.ui.exam.style.display = 'flex';
+                
+                this.loadQuestion(0);
+                this.startTimer();
+            }
+
+            // --- NAVIGATION ---
+            async loadQuestion(idx) {
+                this.currentIndex = idx;
+                this.qSeconds = 0; 
+                this.closeHint();
+                this.resetHints();
+                
+                document.getElementById('progress-bar').style.width = `${((idx+1)/100)*100}%`;
+                
+                // Anti-Cheat Check: If resume pressed & key exists -> Regenerate
+                if (this.regenerateFlag && this.apiKey) {
+                    this.regenerateFlag = false;
+                    await this.performRegeneration(idx);
+                } 
+                // Live Generation: If key exists AND not already regen -> Generate fresh
+                else if (this.apiKey && !this.questions[idx].isRegenerated) {
+                    await this.performRegeneration(idx);
+                }
+
+                this.renderQuestion(this.questions[idx]);
+            }
+
+            async performRegeneration(idx) {
+                this.ui.loader.style.display = 'flex';
+                document.getElementById('loader-text').innerText = "Gemini is generating a unique question...";
+                
+                const baseQ = this.questions[idx];
+                const prompt = `
+                    Task: Create a unique multiple-choice question about: "${baseQ.t}".
+                    Concept: ${baseQ.q}
+                    Output JSON only:
+                    {
+                        "q": "Question Text",
+                        "correct": "Correct Answer Text",
+                        "distractors": ["Wrong 1", "Wrong 2", "Wrong 3"]
+                    }
+                `;
+
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    
+                    const data = await res.json();
+                    const text = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                    const json = JSON.parse(text);
+                    
+                    this.questions[idx] = {
+                        t: baseQ.t,
+                        q: json.q,
+                        a: json.correct,
+                        o: json.distractors, // Clean distractors only
+                        id: idx,
+                        isRegenerated: true
+                    };
+                } catch(e) { console.error("Regen failed, using static", e); }
+                
+                this.ui.loader.style.display = 'none';
+            }
+
+            renderQuestion(qData) {
+                document.getElementById('q-meta').innerText = `${qData.t} • Q${this.currentIndex+1}`;
+                document.getElementById('q-text').innerText = qData.q;
+                
+                const grid = document.getElementById('q-options');
+                grid.innerHTML = '';
+
+                // 1. Combine Correct + Distractors
+                let rawOptions = [qData.a, ...qData.o];
+                
+                // 2. Dedup
+                let uniqueOptions = [...new Set(rawOptions)];
+                
+                // 3. Objectify & Shuffle
+                let finalOptions = uniqueOptions.map(txt => ({
+                    text: txt,
+                    isCorrect: txt === qData.a
+                }));
+                
+                finalOptions = this.shuffle(finalOptions);
+                qData.displayedOptions = finalOptions.map(o => o.text);
+
+                finalOptions.forEach((opt) => {
+                    const btn = document.createElement('div');
+                    btn.className = 'option-btn';
+                    
+                    if(this.userAnswers[this.currentIndex] && this.userAnswers[this.currentIndex].selected === opt.text) {
+                        btn.classList.add('selected');
+                    }
+
+                    btn.innerText = opt.text;
+                    btn.onclick = () => {
+                        this.userAnswers[this.currentIndex] = {
+                            qId: this.currentIndex,
+                            question: qData.q,
+                            selected: opt.text,
+                            correct: qData.a,
+                            isCorrect: opt.isCorrect,
+                            topic: qData.t,
+                            wasRegenerated: qData.isRegenerated,
+                            displayedOptions: qData.displayedOptions
+                        };
+                        Array.from(grid.children).forEach(c => c.classList.remove('selected'));
+                        btn.classList.add('selected');
+                    };
+                    grid.appendChild(btn);
+                });
+
+                document.getElementById('btn-prev').disabled = this.currentIndex === 0;
+                if(this.currentIndex === 99) {
+                    document.getElementById('btn-next').style.display = 'none';
+                    document.getElementById('btn-finish').style.display = 'block';
+                } else {
+                    document.getElementById('btn-next').style.display = 'block';
+                    document.getElementById('btn-finish').style.display = 'none';
+                }
+            }
+
+            resetHints() {
+                this.hintsLeft = 3;
+                this.ui.hintBadge.innerText = this.hintsLeft;
+                this.ui.hintBtn.classList.add('pulsating');
+                this.ui.hintBtn.style.opacity = "1";
+            }
+
+            closeHint() { this.ui.hintDrawer.classList.remove('visible'); }
+
+            async getHint() {
+                if (this.hintsLeft <= 0) return;
+                this.hintsLeft--;
+                this.ui.hintBadge.innerText = this.hintsLeft;
+                if(this.hintsLeft === 0) {
+                    this.ui.hintBtn.classList.remove('pulsating');
+                    this.ui.hintBtn.style.opacity = "0.5";
+                }
+
+                this.ui.hintDrawer.classList.add('visible');
+                this.ui.hintContent.innerText = "Consulting AI...";
+
+                if(!this.apiKey) {
+                    this.ui.hintContent.innerText = "Hints disabled (No API Key).";
+                    return;
+                }
+
+                const q = this.questions[this.currentIndex];
+                const prompt = `Give a short hint for: "${q.q}". Do not give the answer.`;
+                
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    const data = await res.json();
+                    this.ui.hintContent.innerText = data.candidates[0].content.parts[0].text;
+                } catch(e) {
+                    this.ui.hintContent.innerText = "Error fetching hint.";
+                }
+            }
+
+            startTimer() {
+                this.interval = setInterval(() => {
+                    this.timerTotal++;
+                    this.qSeconds++;
+                    
+                    const m = Math.floor(this.timerTotal / 60).toString().padStart(2,'0');
+                    const s = (this.timerTotal % 60).toString().padStart(2,'0');
+                    document.getElementById('timer-total').innerText = `${m}:${s}`;
+
+                    const qm = Math.floor(this.qSeconds / 60).toString().padStart(2,'0');
+                    const qs = (this.qSeconds % 60).toString().padStart(2,'0');
+                    document.getElementById('timer-question').innerText = `${qm}:${qs}`;
+                }, 1000);
+            }
+
+            pause() {
+                clearInterval(this.interval);
+                this.regenerateFlag = true; 
+                document.getElementById('pause-overlay').style.display = 'flex';
+                this.ui.qCard.style.filter = "blur(10px)";
+            }
+
+            resume() {
+                document.getElementById('pause-overlay').style.display = 'none';
+                this.ui.qCard.style.filter = "none";
+                this.startTimer();
+                this.loadQuestion(this.currentIndex);
+            }
+
+            next() { 
+                if(this.currentIndex < 99) {
+                    if(this.userAnswers[this.currentIndex]) this.userAnswers[this.currentIndex].time = this.qSeconds;
+                    this.loadQuestion(this.currentIndex + 1); 
+                }
+            }
+            prev() { if(this.currentIndex > 0) this.loadQuestion(this.currentIndex - 1); }
+
+            finish() {
+                clearInterval(this.interval);
+                this.ui.exam.style.display = 'none';
+                this.ui.dash.style.display = 'block';
+
+                let correct = 0;
+                let reviewHtml = "";
+
+                this.userAnswers.forEach((ans, i) => {
+                    if(!ans) return;
+                    if(ans.isCorrect) correct++;
+                    
+                    const statusClass = ans.isCorrect ? 'correct' : 'incorrect';
+                    const statusText = ans.isCorrect ? 'Correct' : 'Incorrect';
+                    const regenTag = ans.wasRegenerated ? '<span style="font-size:0.7rem; background:#e0f2fe; color:#0284c7; padding:2px 6px; border-radius:4px; margin-left:5px;">Regenerated</span>' : '';
+
+                    reviewHtml += `
+                        <div class="review-item">
+                            <div style="margin-bottom:5px;">
+                                <span class="tag ${statusClass}">${statusText}</span>
+                                <span class="tag topic">${ans.topic}</span>
+                                ${regenTag}
+                            </div>
+                            <div style="font-weight:600; margin-bottom:8px;">Q${i+1}: ${ans.question}</div>
+                            <div style="font-size:0.9rem;">
+                                <div style="color:${ans.isCorrect ? '#166534' : '#991b1b'}">You: ${ans.selected}</div>
+                                ${!ans.isCorrect ? `<div style="color:#166534; margin-top:4px;">Correct: ${ans.correct}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('score-final').innerText = Math.round((correct/100)*100) + "%";
+                document.getElementById('time-final').innerText = "Time: " + Math.floor(this.timerTotal/60) + "m";
+                document.getElementById('review-content').innerHTML = reviewHtml;
+
+                const ctx = document.getElementById('behaviorChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Correct', 'Incorrect'],
+                        datasets: [{ data: [correct, 100-correct], backgroundColor: ['#10b981', '#ef4444'] }]
+                    }
+                });
+            }
+
+            exportJSON() {
+                const data = JSON.stringify({ 
+                    date: new Date(), 
+                    score: document.getElementById('score-final').innerText, 
+                    answers: this.userAnswers 
+                }, null, 2);
+                const blob = new Blob([data], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'cyber_v7_results.json';
+                a.click();
+            }
+        }
+
+        const app = new CyberApp();
+    </script>
+</body>
+</html>
