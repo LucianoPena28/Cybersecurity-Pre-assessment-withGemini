@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberPro v7.0 (AI Live Generation)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CyberPro v8.0 (Mobile Responsive)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -15,6 +15,8 @@
             --bg: #f8fafc;
             --card: #ffffff;
             --text: #334155;
+            /* Safe area for modern phones */
+            --safe-bottom: env(safe-area-inset-bottom);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -24,41 +26,79 @@
             background: var(--bg); 
             color: var(--text); 
             margin: 0; 
-            height: 100vh; 
+            padding: 0; 
+            /* Use dvh (Dynamic Viewport Height) to handle mobile browser bars correctly */
+            height: 100dvh; 
+            width: 100vw;
             display: flex; 
             flex-direction: column; 
             overflow: hidden; 
         }
 
-        /* --- UI COMPONENTS --- */
-        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 1rem; touch-action: manipulation; }
-        .btn-primary { background: var(--accent); color: white; width: 100%; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); }
-        .btn-primary:active { transform: scale(0.98); }
-        .btn-secondary { background: #e2e8f0; color: var(--primary); }
-
-        /* --- SETUP SCREEN --- */
-        #setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; text-align: center; }
+        /* --- SETUP SCREEN (Centered) --- */
+        #setup-screen { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
+            text-align: center;
+            overflow-y: auto;
+        }
         .setup-card { background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100%; max-width: 400px; }
         .input-group { margin: 20px 0; text-align: left; }
-        input[type="password"] { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; outline: none; margin-bottom: 10px; }
+        input[type="password"] { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; outline: none; margin-bottom: 10px; }
         input[type="password"]:focus { border-color: var(--accent); }
+        
+        .btn { padding: 14px 20px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 1rem; touch-action: manipulation; }
+        .btn-primary { background: var(--accent); color: white; width: 100%; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-secondary { background: #e2e8f0; color: var(--primary); }
         .status-msg { font-size: 0.85rem; font-weight: 600; min-height: 20px; margin-top: 5px; }
 
-        /* --- EXAM INTERFACE --- */
-        #exam-interface { display: none; flex-direction: column; height: 100%; position: relative; }
+        /* --- MAIN LAYOUT (FLEX COLUMN) --- */
+        #exam-interface, #dashboard { 
+            display: none; 
+            flex-direction: column; 
+            height: 100dvh; /* Full dynamic height */
+            width: 100%;
+        }
+
+        /* 1. HEADER (Fixed Top) */
+        header { 
+            flex: 0 0 auto; /* Don't shrink or grow */
+            background: var(--card); 
+            padding: 10px 20px; 
+            border-bottom: 1px solid #e2e8f0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            height: 65px; 
+            z-index: 20;
+        }
         
-        header { background: var(--card); padding: 10px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; height: 70px; flex-shrink: 0; }
-        .timer-container { display: flex; align-items: center; gap: 15px; font-variant-numeric: tabular-nums; }
+        .timer-container { display: flex; align-items: center; gap: 12px; font-variant-numeric: tabular-nums; }
         .timer-box { display: flex; flex-direction: column; align-items: center; line-height: 1; }
-        .timer-label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; }
-        .timer-val { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
-        .timer-sep { height: 25px; width: 1px; background: #e2e8f0; }
+        .timer-label { font-size: 0.6rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; }
+        .timer-val { font-size: 1rem; font-weight: 700; color: var(--primary); }
+        .timer-sep { height: 20px; width: 1px; background: #e2e8f0; }
 
         .progress-container { height: 4px; background: #e2e8f0; width: 100%; flex-shrink: 0; }
         .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease; }
-        
-        .main-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; position: relative; }
-        
+
+        /* 2. MAIN CONTENT (Scrollable Middle) */
+        .main-content { 
+            flex: 1 1 auto; /* Take remaining space */
+            overflow-y: auto; /* Scroll internally */
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            position: relative; 
+            -webkit-overflow-scrolling: touch;
+        }
+
         .question-card { 
             background: var(--card); 
             width: 100%; 
@@ -66,32 +106,53 @@
             padding: 25px; 
             border-radius: 16px; 
             box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
-            position: relative; 
-            margin-bottom: 100px; /* Space for hint FAB */
+            margin-bottom: 20px; /* Space at bottom of scroll area */
         }
 
         .q-meta { font-size: 0.75rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 15px; }
-        .q-text { font-size: 1.25rem; font-weight: 700; line-height: 1.4; color: var(--primary); margin-bottom: 25px; }
+        .q-text { font-size: 1.15rem; font-weight: 700; line-height: 1.4; color: var(--primary); margin-bottom: 25px; }
         
         .options-grid { display: flex; flex-direction: column; gap: 12px; }
         .option-btn { 
             background: #fff; border: 2px solid #e2e8f0; 
-            padding: 18px; border-radius: 12px; 
+            padding: 16px; border-radius: 12px; 
             text-align: left; font-size: 1rem; 
-            cursor: pointer; transition: all 0.2s; 
+            cursor: pointer; transition: all 0.1s; 
             color: var(--text); position: relative;
         }
-        .option-btn:active { background: #f1f5f9; transform: scale(0.99); }
-        .option-btn.selected { border-color: var(--accent); background: #eff6ff; color: var(--accent); font-weight: 600; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        .option-btn:active { background: #f1f5f9; transform: scale(0.98); }
+        .option-btn.selected { border-color: var(--accent); background: #eff6ff; color: var(--accent); font-weight: 600; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
 
-        /* --- HINT SYSTEM --- */
-        .hint-container { position: fixed; bottom: 90px; right: 20px; z-index: 50; display: flex; flex-direction: column; align-items: flex-end; }
+        /* 3. FOOTER (Fixed Bottom) */
+        footer { 
+            flex: 0 0 auto; /* Don't shrink */
+            padding: 15px 20px; 
+            padding-bottom: calc(15px + var(--safe-bottom)); /* Handle iPhone Home Bar */
+            background: white; 
+            border-top: 1px solid #e2e8f0; 
+            display: flex; 
+            gap: 10px; 
+            z-index: 20;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+        footer .btn { flex: 1; padding: 16px; font-size: 1rem; }
+
+        /* --- HINT SYSTEM (Floating above Footer) --- */
+        .hint-container { 
+            position: fixed; 
+            bottom: calc(85px + var(--safe-bottom)); /* Position above footer */
+            right: 20px; 
+            z-index: 30; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-end; 
+        }
         .hint-badge { background: var(--primary); color: white; font-size: 0.7rem; font-weight: bold; padding: 4px 8px; border-radius: 10px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .hint-fab { 
-            width: 60px; height: 60px; border-radius: 50%; 
+            width: 56px; height: 56px; border-radius: 50%; 
             background: linear-gradient(135deg, #8b5cf6, #d946ef); 
             color: white; border: none; cursor: pointer; 
-            font-size: 1.8rem; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); 
+            font-size: 1.5rem; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); 
             display: flex; align-items: center; justify-content: center;
             transition: transform 0.2s;
         }
@@ -102,43 +163,73 @@
         .hint-modal { 
             position: fixed; bottom: 0; left: 0; width: 100%; 
             background: white; border-radius: 20px 20px 0 0; 
-            padding: 25px; box-shadow: 0 -5px 30px rgba(0,0,0,0.1); 
+            padding: 25px; box-shadow: 0 -5px 30px rgba(0,0,0,0.2); 
             transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
-            z-index: 100; max-height: 50vh; overflow-y: auto;
+            z-index: 100; max-height: 60vh; overflow-y: auto;
+            padding-bottom: calc(25px + var(--safe-bottom));
         }
         .hint-modal.visible { transform: translateY(0); }
+        .hint-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: 700; color: #8b5cf6; font-size: 1.1rem; }
 
-        /* --- FOOTER --- */
-        footer { padding: 15px 20px; background: white; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; z-index: 10; flex-shrink: 0; }
-        footer .btn { flex: 1; }
+        /* --- DASHBOARD LAYOUT --- */
+        #dashboard header { justify-content: center; border-bottom: none; background: transparent; }
+        .dash-content { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px; 
+            padding-bottom: 100px; /* Space for fixed button */
+        }
 
-        /* --- LOADING & OVERLAYS --- */
-        .ai-loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; border-radius: 16px; backdrop-filter: blur(2px); }
+        .stat-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Responsive Grid */
+            gap: 15px; 
+            margin-bottom: 20px; 
+        }
+        .stat-card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); text-align: center; }
+        .big-num { font-size: 2.5rem; font-weight: 800; color: var(--primary); }
+        
+        /* Graph Container */
+        .chart-wrapper {
+            position: relative;
+            height: 250px; /* Fixed height for mobile */
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        @media (min-width: 768px) {
+            .chart-wrapper { height: 350px; } /* Taller on desktop */
+            .stat-grid { grid-template-columns: 1fr 1fr 1fr; }
+        }
+
+        .review-list { background: white; border-radius: 16px; padding: 20px; margin-top: 20px; }
+        .review-item { padding: 15px 0; border-bottom: 1px solid #f1f5f9; text-align: left; }
+        
+        .tag { font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; font-weight: 700; margin-right: 5px; display: inline-block; margin-bottom: 5px; }
+        .tag.correct { background: #dcfce7; color: #166534; }
+        .tag.incorrect { background: #fee2e2; color: #991b1b; }
+        .tag.topic { background: #f1f5f9; color: #64748b; }
+
+        /* OVERLAYS */
+        .ai-loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; border-radius: 16px; backdrop-filter: blur(2px); }
         .spinner { width: 35px; height: 35px; border: 4px solid #e2e8f0; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); display: none; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; backdrop-filter: blur(5px); }
-        
-        /* --- DASHBOARD --- */
-        #dashboard { display: none; padding: 20px; overflow-y: auto; height: 100%; background: var(--bg); }
-        .stat-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
-        .review-item { padding: 20px 0; border-bottom: 1px solid #f1f5f9; text-align: left; }
-        .tag { font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; font-weight: 700; margin-right: 5px; }
-        .tag.correct { background: #dcfce7; color: #166534; }
-        .tag.incorrect { background: #fee2e2; color: #991b1b; }
-        .tag.topic { background: #f1f5f9; color: #64748b; font-weight: 600; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); display: none; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; backdrop-filter: blur(5px); padding: 20px; }
+        .modal-box { background: white; color: var(--text); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 350px; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
     </style>
 </head>
 <body>
 
     <div id="setup-screen">
-        <h1 style="color:var(--primary); margin-bottom:10px;">CyberPro v7.0</h1>
         <div class="setup-card">
-            <p style="color:#64748b; font-size:0.9rem;">Connect Gemini API for Live Question Generation.</p>
+            <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary); margin-bottom: 10px;">CyberPro v8.0</div>
+            <p style="color:#64748b; font-size:0.9rem; margin-bottom: 20px;">Mobile-Optimized AI Assessment</p>
             <div class="input-group">
                 <label style="font-weight:600; font-size:0.8rem; display:block; margin-bottom:5px;">Gemini API Key (Optional)</label>
                 <input type="password" id="api-key" placeholder="AIzaSy...">
-                <button class="btn btn-secondary" onclick="app.testConnection()" style="width:100%">Test Connection</button>
+                <button class="btn btn-secondary" onclick="app.testConnection()" style="width:100%; margin-top:10px;">Test Connection</button>
                 <div id="api-status" class="status-msg"></div>
             </div>
             <button class="btn btn-primary" onclick="app.startExam()">Start Assessment</button>
@@ -147,7 +238,6 @@
 
     <div id="exam-interface">
         <header>
-            <div style="font-weight:800;">CyberPro</div>
             <div class="timer-container">
                 <div class="timer-box">
                     <span class="timer-label">TOTAL</span>
@@ -161,13 +251,14 @@
             </div>
             <button class="btn btn-secondary" style="padding:6px 12px; font-size:0.8rem;" onclick="app.pause()">PAUSE</button>
         </header>
-        <div class="progress-container"><div class="progress-fill" id="progress-bar"></div></div>
         
+        <div class="progress-container"><div class="progress-fill" id="progress-bar"></div></div>
+
         <div class="main-content">
             <div class="question-card" id="q-card">
                 <div class="ai-loader" id="ai-loader">
                     <div class="spinner"></div>
-                    <div style="font-size:0.9rem; font-weight:600; color:var(--accent);" id="loader-text">Gemini is writing a new question...</div>
+                    <div style="font-size:0.9rem; font-weight:600; color:var(--accent);" id="loader-text">AI Generating...</div>
                 </div>
                 
                 <div class="q-meta" id="q-meta">TOPIC</div>
@@ -182,8 +273,8 @@
         </div>
 
         <div class="hint-modal" id="hint-drawer">
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:700; color:#8b5cf6;">
-                <span>AI Insight</span><span onclick="app.closeHint()" style="cursor:pointer; font-size:1.5rem; padding:0 10px;">✕</span>
+            <div class="hint-header">
+                <span>AI Insight</span><span onclick="app.closeHint()" style="cursor:pointer; font-size:1.5rem; padding:5px;">✕</span>
             </div>
             <div id="hint-content">Thinking...</div>
         </div>
@@ -196,35 +287,49 @@
     </div>
 
     <div class="overlay" id="pause-overlay">
-        <div>
+        <div class="modal-box">
             <div style="font-size:3rem; margin-bottom:15px;">⏸️</div>
-            <h2>Exam Paused</h2>
-            <p style="color:#cbd5e1; max-width:300px; margin:0 auto 20px auto; font-size:0.9rem;">To ensure integrity, this question will be regenerated when you resume.</p>
-            <button class="btn btn-primary" onclick="app.resume()">Resume & Regenerate</button>
+            <h2>Paused</h2>
+            <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">Anti-Cheat: Question will regenerate upon resume.</p>
+            <button class="btn btn-primary" onclick="app.resume()">Resume</button>
         </div>
     </div>
 
     <div id="dashboard">
-        <div class="stat-card">
-            <div style="font-size:3.5rem; font-weight:800; color:var(--primary);" id="score-final">0%</div>
-            <div style="color:#64748b; font-size:0.9rem; font-weight:600;">FINAL SCORE</div>
-            <div id="time-final" style="margin-top:10px; font-weight:600;"></div>
+        <div class="dash-content">
+            <h2 style="margin-bottom:20px;">Results</h2>
+            
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="big-num" id="score-final">0%</div>
+                    <div style="color:#64748b; font-size:0.8rem;">SCORE</div>
+                </div>
+                <div class="stat-card">
+                    <div class="big-num" id="time-final">0m</div>
+                    <div style="color:#64748b; font-size:0.8rem;">TIME</div>
+                </div>
+            </div>
+
+            <div class="stat-card" style="margin-bottom:20px;">
+                <h3 style="margin:0 0 15px 0; font-size:1rem;">Behavioral Profile</h3>
+                <div class="chart-wrapper">
+                    <canvas id="behaviorChart"></canvas>
+                </div>
+            </div>
+
+            <div class="review-list">
+                <h3 style="margin:0 0 15px 0; font-size:1rem;">Review</h3>
+                <div id="review-content"></div>
+            </div>
         </div>
-        <div class="stat-card">
-            <canvas id="behaviorChart"></canvas>
+        <div style="padding:15px; background:white; border-top:1px solid #e2e8f0; flex: 0 0 auto;">
+            <button class="btn btn-primary" onclick="app.exportJSON()">Export JSON Report</button>
         </div>
-        <div class="stat-card" style="text-align:left;">
-            <h3>Detailed Review</h3>
-            <div id="review-content"></div>
-        </div>
-        <button class="btn btn-secondary" style="width:100%; margin-top:20px;" onclick="app.exportJSON()">Download JSON Report</button>
     </div>
 
     <script>
-        // --- CLEAN DATASET (Correct Answer NOT in Distractors) ---
-        // 'a' = correct answer
-        // 'o' = ONLY distractors (incorrect answers)
-        const SEED_DATA = [
+        // --- 100 REAL QUESTIONS (CLEANED) ---
+        const BASE_DATA = [
             { t: "Governance", q: "A company wants to reduce IT infrastructure costs while maintaining strict security control. They implement a 'Zero Trust' policy. Which action best aligns with this?", a: "Continuous verification of every user and device", o: ["Trusting all devices inside the firewall", "Using a VPN for all staff", "Installing antivirus on the server"] },
             { t: "Security Principles", q: "During a forensic investigation, you find that a hacker modified patient records. Which pillar of the CIA Triad was compromised?", a: "Integrity", o: ["Confidentiality", "Availability", "Authentication"] },
             { t: "Attack Vectors", q: "A user receives an email from 'IT Support' claiming their password expired, linking to a fake site. This is:", a: "Phishing", o: ["Whaling", "DNS Spoofing", "Man-in-the-Middle"] },
@@ -314,7 +419,7 @@
             { t: "Attack Vectors", q: "Keylogging:", a: "Recording user keystrokes", o: ["Making keys", "Locking doors", "Logging into admin"] },
             { t: "Attack Vectors", q: "Shoulder Surfing:", a: "Looking at someone's screen", o: ["Massaging shoulders", "Surfing online", "Hacking Wi-Fi"] },
             { t: "Attack Vectors", q: "Privilege Escalation:", a: "Exploiting bug to gain higher access", o: ["Getting promotion", "Logging out", "Changing password"] },
-            { t: "Data Security", q: "DLP (Data Loss Prevention):", a: "Tools preventing data from leaving network", o: ["Backing up data", "Deleting data", "Encrypting data"] },
+            { t: "Data Security", q: "DLP (Data Loss Prevention):", a: "Tools/policies to prevent sensitive data from leaving network", o: ["Backing up data", "Deleting data", "Encrypting data"] },
             { t: "Governance", q: "BYOD:", a: "Bring Your Own Device", o: ["Buy Your Own Data", "Build Your Own Database", "Bring Your Own Desk"] },
             { t: "Governance", q: "Risk of BYOD:", a: "Mixing personal/corporate data", o: ["Cost", "Too many devices", "Slow wifi"] },
             { t: "Governance", q: "MDM:", a: "Mobile Device Management", o: ["Master Data Manager", "Main Domain Module", "My Device Manager"] },
@@ -327,8 +432,8 @@
             { t: "Governance", q: "Compliance:", a: "Adhering to laws/regulations", o: ["Agreeing with hackers", "Installing software", "Attending meetings"] }
         ];
 
-        // Ensure 100 questions by filling if short (safety net)
-        while(SEED_DATA.length < 100) SEED_DATA.push(SEED_DATA[0]);
+        // Loop to ensure 100% count even if seed data is short
+        while(BASE_DATA.length < 100) BASE_DATA.push(BASE_DATA[0]);
 
         class CyberApp {
             constructor() {
@@ -355,7 +460,6 @@
                 };
             }
 
-            // --- UTILS ---
             shuffle(array) {
                 let currentIndex = array.length, randomIndex;
                 while (currentIndex != 0) {
@@ -366,19 +470,11 @@
                 return array;
             }
 
-            // --- API ---
             async testConnection() {
                 const key = document.getElementById('api-key').value;
                 const status = document.getElementById('api-status');
-                
-                if(!key) {
-                    status.innerText = "Please enter a key";
-                    status.style.color = "var(--danger)";
-                    return;
-                }
-                
-                status.innerText = "Testing Gemini 2.0...";
-                status.style.color = "var(--accent)";
+                if(!key) { status.innerText = "Please enter a key"; status.style.color = "var(--danger)"; return; }
+                status.innerText = "Testing Gemini 2.0..."; status.style.color = "var(--accent)";
                 
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
@@ -386,24 +482,14 @@
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ contents: [{ parts: [{ text: "Hello" }] }] })
                     });
-                    
-                    if(res.ok) {
-                        this.apiKey = key;
-                        status.innerText = "✅ Connection Verified";
-                        status.style.color = "var(--success)";
-                    } else throw new Error();
-                } catch(e) {
-                    status.innerText = "❌ Connection Failed";
-                    status.style.color = "var(--danger)";
-                }
+                    if(res.ok) { this.apiKey = key; status.innerText = "✅ Verified"; status.style.color = "var(--success)"; }
+                    else throw new Error();
+                } catch(e) { status.innerText = "❌ Failed"; status.style.color = "var(--danger)"; }
             }
 
-            // --- START ---
             startExam() {
                 if(!this.apiKey) this.apiKey = document.getElementById('api-key').value;
-                
-                // Init: Shuffle & prepare
-                this.questions = this.shuffle(SEED_DATA.map((q, i) => ({ ...q, id: i, isRegenerated: false })));
+                this.questions = this.shuffle(BASE_DATA.map((q, i) => ({ ...q, id: i, isRegenerated: false })));
                 this.userAnswers = new Array(100).fill(null);
                 
                 this.ui.setup.style.display = 'none';
@@ -413,7 +499,6 @@
                 this.startTimer();
             }
 
-            // --- NAVIGATION ---
             async loadQuestion(idx) {
                 this.currentIndex = idx;
                 this.qSeconds = 0; 
@@ -422,13 +507,10 @@
                 
                 document.getElementById('progress-bar').style.width = `${((idx+1)/100)*100}%`;
                 
-                // Anti-Cheat Check: If resume pressed & key exists -> Regenerate
                 if (this.regenerateFlag && this.apiKey) {
                     this.regenerateFlag = false;
                     await this.performRegeneration(idx);
-                } 
-                // Live Generation: If key exists AND not already regen -> Generate fresh
-                else if (this.apiKey && !this.questions[idx].isRegenerated) {
+                } else if (this.apiKey && !this.questions[idx].isRegenerated) {
                     await this.performRegeneration(idx);
                 }
 
@@ -437,19 +519,8 @@
 
             async performRegeneration(idx) {
                 this.ui.loader.style.display = 'flex';
-                document.getElementById('loader-text').innerText = "Gemini is generating a unique question...";
-                
                 const baseQ = this.questions[idx];
-                const prompt = `
-                    Task: Create a unique multiple-choice question about: "${baseQ.t}".
-                    Concept: ${baseQ.q}
-                    Output JSON only:
-                    {
-                        "q": "Question Text",
-                        "correct": "Correct Answer Text",
-                        "distractors": ["Wrong 1", "Wrong 2", "Wrong 3"]
-                    }
-                `;
+                const prompt = `Task: Create a unique question about "${baseQ.t}". Concept: ${baseQ.q} Output JSON: {"q": "New Question", "correct": "Correct Answer", "distractors": ["Wrong 1", "Wrong 2", "Wrong 3"]}`;
 
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`, {
@@ -457,54 +528,28 @@
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                     });
-                    
                     const data = await res.json();
                     const text = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
                     const json = JSON.parse(text);
-                    
-                    this.questions[idx] = {
-                        t: baseQ.t,
-                        q: json.q,
-                        a: json.correct,
-                        o: json.distractors, // Clean distractors only
-                        id: idx,
-                        isRegenerated: true
-                    };
-                } catch(e) { console.error("Regen failed, using static", e); }
-                
+                    this.questions[idx] = { t: baseQ.t, q: json.q, a: json.correct, o: json.distractors, id: idx, isRegenerated: true };
+                } catch(e) { console.error("Regen failed", e); }
                 this.ui.loader.style.display = 'none';
             }
 
             renderQuestion(qData) {
                 document.getElementById('q-meta').innerText = `${qData.t} • Q${this.currentIndex+1}`;
                 document.getElementById('q-text').innerText = qData.q;
-                
                 const grid = document.getElementById('q-options');
                 grid.innerHTML = '';
 
-                // 1. Combine Correct + Distractors
                 let rawOptions = [qData.a, ...qData.o];
-                
-                // 2. Dedup
                 let uniqueOptions = [...new Set(rawOptions)];
-                
-                // 3. Objectify & Shuffle
-                let finalOptions = uniqueOptions.map(txt => ({
-                    text: txt,
-                    isCorrect: txt === qData.a
-                }));
-                
-                finalOptions = this.shuffle(finalOptions);
-                qData.displayedOptions = finalOptions.map(o => o.text);
+                let finalOptions = this.shuffle(uniqueOptions.map(txt => ({ text: txt, isCorrect: txt === qData.a })));
 
                 finalOptions.forEach((opt) => {
                     const btn = document.createElement('div');
                     btn.className = 'option-btn';
-                    
-                    if(this.userAnswers[this.currentIndex] && this.userAnswers[this.currentIndex].selected === opt.text) {
-                        btn.classList.add('selected');
-                    }
-
+                    if(this.userAnswers[this.currentIndex] && this.userAnswers[this.currentIndex].selected === opt.text) btn.classList.add('selected');
                     btn.innerText = opt.text;
                     btn.onclick = () => {
                         this.userAnswers[this.currentIndex] = {
@@ -514,8 +559,7 @@
                             correct: qData.a,
                             isCorrect: opt.isCorrect,
                             topic: qData.t,
-                            wasRegenerated: qData.isRegenerated,
-                            displayedOptions: qData.displayedOptions
+                            wasRegenerated: qData.isRegenerated
                         };
                         Array.from(grid.children).forEach(c => c.classList.remove('selected'));
                         btn.classList.add('selected');
@@ -546,22 +590,12 @@
                 if (this.hintsLeft <= 0) return;
                 this.hintsLeft--;
                 this.ui.hintBadge.innerText = this.hintsLeft;
-                if(this.hintsLeft === 0) {
-                    this.ui.hintBtn.classList.remove('pulsating');
-                    this.ui.hintBtn.style.opacity = "0.5";
-                }
-
+                if(this.hintsLeft === 0) { this.ui.hintBtn.classList.remove('pulsating'); this.ui.hintBtn.style.opacity = "0.5"; }
                 this.ui.hintDrawer.classList.add('visible');
                 this.ui.hintContent.innerText = "Consulting AI...";
 
-                if(!this.apiKey) {
-                    this.ui.hintContent.innerText = "Hints disabled (No API Key).";
-                    return;
-                }
-
-                const q = this.questions[this.currentIndex];
-                const prompt = `Give a short hint for: "${q.q}". Do not give the answer.`;
-                
+                if(!this.apiKey) { this.ui.hintContent.innerText = "Hints disabled (No API Key)."; return; }
+                const prompt = `Give a short hint for: "${this.questions[this.currentIndex].q}". Do not give the answer.`;
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`, {
                         method: 'POST',
@@ -570,52 +604,30 @@
                     });
                     const data = await res.json();
                     this.ui.hintContent.innerText = data.candidates[0].content.parts[0].text;
-                } catch(e) {
-                    this.ui.hintContent.innerText = "Error fetching hint.";
-                }
+                } catch(e) { this.ui.hintContent.innerText = "Error fetching hint."; }
             }
 
             startTimer() {
                 this.interval = setInterval(() => {
-                    this.timerTotal++;
-                    this.qSeconds++;
-                    
-                    const m = Math.floor(this.timerTotal / 60).toString().padStart(2,'0');
-                    const s = (this.timerTotal % 60).toString().padStart(2,'0');
-                    document.getElementById('timer-total').innerText = `${m}:${s}`;
-
+                    this.timerTotal++; this.qSeconds++;
+                    const tm = Math.floor(this.timerTotal / 60).toString().padStart(2,'0');
+                    const ts = (this.timerTotal % 60).toString().padStart(2,'0');
+                    document.getElementById('timer-total').innerText = `${tm}:${ts}`;
                     const qm = Math.floor(this.qSeconds / 60).toString().padStart(2,'0');
                     const qs = (this.qSeconds % 60).toString().padStart(2,'0');
                     document.getElementById('timer-question').innerText = `${qm}:${qs}`;
                 }, 1000);
             }
 
-            pause() {
-                clearInterval(this.interval);
-                this.regenerateFlag = true; 
-                document.getElementById('pause-overlay').style.display = 'flex';
-                this.ui.qCard.style.filter = "blur(10px)";
-            }
-
-            resume() {
-                document.getElementById('pause-overlay').style.display = 'none';
-                this.ui.qCard.style.filter = "none";
-                this.startTimer();
-                this.loadQuestion(this.currentIndex);
-            }
-
-            next() { 
-                if(this.currentIndex < 99) {
-                    if(this.userAnswers[this.currentIndex]) this.userAnswers[this.currentIndex].time = this.qSeconds;
-                    this.loadQuestion(this.currentIndex + 1); 
-                }
-            }
+            pause() { clearInterval(this.interval); this.regenerateFlag = true; document.getElementById('pause-overlay').style.display = 'flex'; this.ui.qCard.style.filter = "blur(10px)"; }
+            resume() { document.getElementById('pause-overlay').style.display = 'none'; this.ui.qCard.style.filter = "none"; this.startTimer(); this.loadQuestion(this.currentIndex); }
+            next() { if(this.currentIndex < 99) { if(this.userAnswers[this.currentIndex]) this.userAnswers[this.currentIndex].time = this.qSeconds; this.loadQuestion(this.currentIndex + 1); } }
             prev() { if(this.currentIndex > 0) this.loadQuestion(this.currentIndex - 1); }
 
             finish() {
                 clearInterval(this.interval);
                 this.ui.exam.style.display = 'none';
-                this.ui.dash.style.display = 'block';
+                this.ui.dash.style.display = 'flex';
 
                 let correct = 0;
                 let reviewHtml = "";
@@ -623,10 +635,9 @@
                 this.userAnswers.forEach((ans, i) => {
                     if(!ans) return;
                     if(ans.isCorrect) correct++;
-                    
                     const statusClass = ans.isCorrect ? 'correct' : 'incorrect';
                     const statusText = ans.isCorrect ? 'Correct' : 'Incorrect';
-                    const regenTag = ans.wasRegenerated ? '<span style="font-size:0.7rem; background:#e0f2fe; color:#0284c7; padding:2px 6px; border-radius:4px; margin-left:5px;">Regenerated</span>' : '';
+                    const regenTag = ans.wasRegenerated ? '<span class="tag topic" style="margin-left:5px;">AI-Gen</span>' : '';
 
                     reviewHtml += `
                         <div class="review-item">
@@ -635,7 +646,7 @@
                                 <span class="tag topic">${ans.topic}</span>
                                 ${regenTag}
                             </div>
-                            <div style="font-weight:600; margin-bottom:8px;">Q${i+1}: ${ans.question}</div>
+                            <div style="font-weight:600; margin-bottom:8px; font-size:0.95rem;">Q${i+1}: ${ans.question}</div>
                             <div style="font-size:0.9rem;">
                                 <div style="color:${ans.isCorrect ? '#166534' : '#991b1b'}">You: ${ans.selected}</div>
                                 ${!ans.isCorrect ? `<div style="color:#166534; margin-top:4px;">Correct: ${ans.correct}</div>` : ''}
@@ -645,30 +656,26 @@
                 });
 
                 document.getElementById('score-final').innerText = Math.round((correct/100)*100) + "%";
-                document.getElementById('time-final').innerText = "Time: " + Math.floor(this.timerTotal/60) + "m";
+                document.getElementById('time-final').innerText = Math.floor(this.timerTotal/60) + " min";
                 document.getElementById('review-content').innerHTML = reviewHtml;
 
-                const ctx = document.getElementById('behaviorChart').getContext('2d');
-                new Chart(ctx, {
+                new Chart(document.getElementById('behaviorChart').getContext('2d'), {
                     type: 'doughnut',
                     data: {
                         labels: ['Correct', 'Incorrect'],
                         datasets: [{ data: [correct, 100-correct], backgroundColor: ['#10b981', '#ef4444'] }]
-                    }
+                    },
+                    options: { maintainAspectRatio: false, responsive: true }
                 });
             }
 
             exportJSON() {
-                const data = JSON.stringify({ 
-                    date: new Date(), 
-                    score: document.getElementById('score-final').innerText, 
-                    answers: this.userAnswers 
-                }, null, 2);
+                const data = JSON.stringify({ date: new Date(), score: document.getElementById('score-final').innerText, answers: this.userAnswers }, null, 2);
                 const blob = new Blob([data], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'cyber_v7_results.json';
+                a.download = 'cyber_v8_results.json';
                 a.click();
             }
         }
